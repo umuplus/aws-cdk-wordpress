@@ -7,7 +7,7 @@ import { FileSystem } from 'aws-cdk-lib/aws-efs'
 import { HostedZone } from 'aws-cdk-lib/aws-route53'
 import { InstanceClass, InstanceSize, InstanceType, SubnetType, Vpc } from 'aws-cdk-lib/aws-ec2'
 import { Presets } from './utils/presets'
-import { RemovalPolicy } from 'aws-cdk-lib'
+import { CfnOutput, RemovalPolicy } from 'aws-cdk-lib'
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager'
 
 export interface WordpressProps {
@@ -111,5 +111,14 @@ export class Wordpress extends Construct {
                     targetUtilizationPercent: memoryThreshold,
                 })
         }
+
+        const dbHostOutput = 'WordpressDBHost-' + id
+        new CfnOutput(this, dbHostOutput, { exportName: dbHostOutput, value: db.clusterEndpoint.hostname })
+
+        const dbPasswordOutput = 'WordpressDBPassword-' + id
+        new CfnOutput(this, dbPasswordOutput, { exportName: dbPasswordOutput, value: secretDB.secretValue.toString() })
+
+        const wpPasswordOutput = 'WordpressPassword-' + id
+        new CfnOutput(this, wpPasswordOutput, { exportName: wpPasswordOutput, value: secretWP.secretValue.toString() })
     }
 }

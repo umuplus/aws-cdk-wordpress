@@ -8,6 +8,5 @@ Deploy Wordpress via AWS CDK
 - [x] use existing domain
 - [ ] elasticache redis
 - [ ] customizable cloudfront support (cdn)
-
 - [ ] install and configure plugins
 - [ ] install theme
