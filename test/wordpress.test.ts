@@ -6,7 +6,7 @@ import '@aws-cdk/assert/jest'
 test('basic wordpress stack', () => {
     const app = new App()
     const stack = new Stack(app, 'MyTestStack')
-    new Wordpress(stack, 'MyWP', { domainName: 'example.com' })
+    new Wordpress(stack, 'MyWP')
     const template = Template.fromStack(stack)
     template.resourceCountIs('AWS::IAM::Role', 2)
     template.resourceCountIs('AWS::EC2::VPC', 1)

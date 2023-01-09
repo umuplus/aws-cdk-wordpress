@@ -1,9 +1,3 @@
-export enum Preset {
-    BASIC = 'basic',
-    SMALL_BUSINESS = 'small-business',
-    BUSINESS = 'business',
-}
-
 export interface DatabaseCredentials {
     readonly name?: string
     readonly tablePrefix?: string

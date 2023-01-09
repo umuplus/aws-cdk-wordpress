@@ -1,44 +1,41 @@
-import { AdvancedProps, DatabaseCredentials, Preset } from './utils/types'
+import { AdvancedProps, DatabaseCredentials } from './utils/types'
 import { ApplicationLoadBalancedFargateService } from 'aws-cdk-lib/aws-ecs-patterns'
 import { AuroraMysqlEngineVersion, Credentials, DatabaseCluster, DatabaseClusterEngine } from 'aws-cdk-lib/aws-rds'
 import { Construct } from 'constructs'
 import { ContainerImage } from 'aws-cdk-lib/aws-ecs'
 import { FileSystem } from 'aws-cdk-lib/aws-efs'
-import { HostedZone } from 'aws-cdk-lib/aws-route53'
 import { InstanceClass, InstanceSize, InstanceType, SubnetType, Vpc } from 'aws-cdk-lib/aws-ec2'
 import { CfnOutput, RemovalPolicy } from 'aws-cdk-lib'
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager'
 
 export interface WordpressProps {
-    readonly domainName: string
     readonly databaseCredentials?: DatabaseCredentials
     readonly username?: string
-    readonly preset?: Preset
     readonly advanced?: AdvancedProps
 }
 
 export class Wordpress extends Construct {
-    constructor(scope: Construct, id: string, props: WordpressProps) {
+    constructor(scope: Construct, id: string, props?: WordpressProps) {
         super(scope, id)
 
-        const { databaseCredentials, domainName } = props
+        const { databaseCredentials } = props || {}
         const databaseName = databaseCredentials?.name || 'wordpress'
         const tablePrefix = databaseCredentials?.tablePrefix || 'wp_'
         const databaseUsername = databaseCredentials?.username || 'wp_user'
 
-        const username = props.username || 'user'
+        const username = props?.username || 'user'
         const volume = 'WordpressVolume-' + id
         const containerPath = '/bitnami/wordpress'
 
-        const maximumAvailabilityZones = props.advanced?.maximumAvailabilityZones || 1
-        const natGateways = props.advanced?.natGateways || 1
-        const taskCPU = props.advanced?.taskCPU || 256
-        const taskMemory = props.advanced?.taskMemory || 1024
-        const desiredTaskInstanceCount = props.advanced?.desiredTaskInstanceCount || 1
-        const cpuThreshold = props.advanced?.cpuThreshold || 85
-        const memoryThreshold = props.advanced?.memoryThreshold || 85
-        const minCapacity = props.advanced?.minCapacity || 1
-        const maxCapacity = props.advanced?.maxCapacity || 1
+        const maximumAvailabilityZones = props?.advanced?.maximumAvailabilityZones || 1
+        const natGateways = props?.advanced?.natGateways || 1
+        const taskCPU = props?.advanced?.taskCPU || 256
+        const taskMemory = props?.advanced?.taskMemory || 1024
+        const desiredTaskInstanceCount = props?.advanced?.desiredTaskInstanceCount || 1
+        const cpuThreshold = props?.advanced?.cpuThreshold || 85
+        const memoryThreshold = props?.advanced?.memoryThreshold || 85
+        const minCapacity = props?.advanced?.minCapacity || 1
+        const maxCapacity = props?.advanced?.maxCapacity || 1
 
         const vpc = new Vpc(this, 'WordpressVPC-' + id, {
             maxAzs: maximumAvailabilityZones,
@@ -91,8 +88,6 @@ export class Wordpress extends Construct {
             taskSubnets: { subnetType: SubnetType.PRIVATE_ISOLATED },
             desiredCount: desiredTaskInstanceCount,
             publicLoadBalancer: true,
-            // domainName,
-            // domainZone: domainName ? HostedZone.fromLookup(this, 'WordpressDomain-' + id, { domainName }) : undefined,
         })
 
         db.connections.allowDefaultPortFrom(wp.service.connections)
