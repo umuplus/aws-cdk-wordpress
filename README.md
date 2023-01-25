@@ -2,7 +2,7 @@
 
 This construct extends an existing CDK stack and adds resources to deploy a highly scalable Wordpress application.
 
-It's still under development.
+> It's still under development.
 
 ## Options
 
@@ -45,4 +45,5 @@ maxCapacity               | number    | false     | 1         | Max. number of i
 ## Motivation
 
 Main purpose of this Wordpress Construct is to provide a configurable Wordpress deployment stack.
+
 Thus, it will be easier to create a simple GUI to manage deployments of different Wordpress applications from a single place which is gonna be the phase two (:
