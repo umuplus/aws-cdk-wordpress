@@ -45,4 +45,4 @@ maxCapacity               | number    | false     | 1         | Max. number of i
 ## Motivation
 
 Main purpose of this Wordpress Construct is to provide a configurable Wordpress deployment stack.
-Thus, it will be easier to create a simple GUI to manage deployments of different Wordpress application from a single place which is gonna be the phase two (:
+Thus, it will be easier to create a simple GUI to manage deployments of different Wordpress applications from a single place which is gonna be the phase two (:
