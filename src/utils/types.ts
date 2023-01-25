@@ -1,13 +1,7 @@
-export interface DatabaseCredentials {
-    readonly name?: string
-    readonly tablePrefix?: string
-    readonly username?: string
-}
-
-export interface AdvancedProps {
+export interface ScalingProps {
     readonly maximumAvailabilityZones?: number
     readonly natGateways?: number
-    readonly taskCPU?: number
+    readonly taskCpu?: number
     readonly taskMemory?: number
     readonly desiredTaskInstanceCount?: number
     readonly cpuThreshold?: number

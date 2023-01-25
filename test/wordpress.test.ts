@@ -112,7 +112,7 @@ test('basic wordpress stack', () => {
                 },
             ],
             Cpu: '256',
-            Memory: '1024',
+            Memory: '512',
             NetworkMode: 'awsvpc',
             RequiresCompatibilities: ['FARGATE'],
             Volumes: [{ Name: 'WordpressVolume-MyWP' }],

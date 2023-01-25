@@ -1,41 +1,40 @@
-import { AdvancedProps, DatabaseCredentials } from './utils/types'
 import { ApplicationLoadBalancedFargateService } from 'aws-cdk-lib/aws-ecs-patterns'
 import { AuroraMysqlEngineVersion, Credentials, DatabaseCluster, DatabaseClusterEngine } from 'aws-cdk-lib/aws-rds'
+import { CfnOutput, RemovalPolicy } from 'aws-cdk-lib'
 import { Construct } from 'constructs'
 import { ContainerImage } from 'aws-cdk-lib/aws-ecs'
 import { FileSystem } from 'aws-cdk-lib/aws-efs'
 import { InstanceClass, InstanceSize, InstanceType, SubnetType, Vpc } from 'aws-cdk-lib/aws-ec2'
-import { CfnOutput, RemovalPolicy } from 'aws-cdk-lib'
+import { ScalingProps } from './utils/types'
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager'
 
 export interface WordpressProps {
-    readonly databaseCredentials?: DatabaseCredentials
     readonly username?: string
-    readonly advanced?: AdvancedProps
+    readonly scaling?: ScalingProps
 }
 
 export class Wordpress extends Construct {
     constructor(scope: Construct, id: string, props?: WordpressProps) {
         super(scope, id)
 
-        const { databaseCredentials } = props || {}
-        const databaseName = databaseCredentials?.name || 'wordpress'
-        const tablePrefix = databaseCredentials?.tablePrefix || 'wp_'
-        const databaseUsername = databaseCredentials?.username || 'wp_user'
+        const { scaling } = props || {}
+        const databaseName = 'wordpress'
+        const tablePrefix = 'wp_'
+        const databaseUsername = 'wp_user'
 
         const username = props?.username || 'user'
         const volume = 'WordpressVolume-' + id
         const containerPath = '/bitnami/wordpress'
 
-        const maximumAvailabilityZones = props?.advanced?.maximumAvailabilityZones || 1
-        const natGateways = props?.advanced?.natGateways || 1
-        const taskCPU = props?.advanced?.taskCPU || 256
-        const taskMemory = props?.advanced?.taskMemory || 1024
-        const desiredTaskInstanceCount = props?.advanced?.desiredTaskInstanceCount || 1
-        const cpuThreshold = props?.advanced?.cpuThreshold || 85
-        const memoryThreshold = props?.advanced?.memoryThreshold || 85
-        const minCapacity = props?.advanced?.minCapacity || 1
-        const maxCapacity = props?.advanced?.maxCapacity || 1
+        const maximumAvailabilityZones = scaling?.maximumAvailabilityZones || 1
+        const natGateways = scaling?.natGateways || 1
+        const taskCpu = scaling?.taskCpu || 256
+        const taskMemory = scaling?.taskMemory || 512
+        const desiredTaskInstanceCount = scaling?.desiredTaskInstanceCount || 1
+        const cpuThreshold = scaling?.cpuThreshold || 90
+        const memoryThreshold = scaling?.memoryThreshold || 90
+        const minCapacity = scaling?.minCapacity || 1
+        const maxCapacity = scaling?.maxCapacity || 1
 
         const vpc = new Vpc(this, 'WordpressVPC-' + id, {
             maxAzs: maximumAvailabilityZones,
@@ -82,7 +81,7 @@ export class Wordpress extends Construct {
                     WORDPRESS_PASSWORD: secretWP.secretValue.toString(),
                 },
             },
-            cpu: taskCPU,
+            cpu: taskCpu,
             memoryLimitMiB: taskMemory,
             vpc,
             taskSubnets: { subnetType: SubnetType.PRIVATE_ISOLATED },
