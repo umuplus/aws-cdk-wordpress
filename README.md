@@ -6,13 +6,14 @@ This construct extends an existing CDK stack and adds resources to deploy a high
 
 ## Options
 
-There are two different set of options: Wordpress and Scaling.
+There are three different set of options: Wordpress, Scaling and Cache.
 
 ### Wordpress Configuration
 
-Parameter     | Type      | Required  | Default   | Description
-------------- | --------- | --------- | --------- | -------------------------
-username      | string    | false     | user      | Administrator's username
+Parameter       | Type          | Required  | Default   | Description
+--------------- | ------------- | --------- | --------- | -------------------------
+username        | string        | false     | user      | Administrator's username
+dbInstanceType  | InstanceType  | false     | t2.micro  | Database instance type
 
 ### Scaling Configuration
 
@@ -41,6 +42,22 @@ cpuThreshold              | number    | false     | 90        | CPU parameter fo
 memoryThreshold           | number    | false     | 90        | Memory parameter for auto scaling rule of the Fargate Task
 minCapacity               | number    | false     | 1         | Min. number of instances for auto scaling rule of the Fargate Task
 maxCapacity               | number    | false     | 1         | Max. number of instances for auto scaling rule of the Fargate Task
+
+### Cache Configuration
+
+Cache is disabled by default. If you want to enable it with default configuration, you can simply set **cache** parameter to **true**.
+
+```typescript
+export interface ScalingProps {
+    readonly cacheNodeType?: InstanceType
+    readonly numberOfCacheNodes?: number
+}
+```
+
+Parameter           | Type      | Required  | Default   | Description         |
+------------------- | --------- | --------- | --------- | ------------------- |
+cacheNodeType       | number    | false     | t2.micro  | Cache node instance type
+numberOfCacheNodes  | number    | false     | 1         | Number of cache nodes
 
 ## Motivation
 
