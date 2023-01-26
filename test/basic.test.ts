@@ -1,4 +1,4 @@
-import { App, RemovalPolicy, Stack } from 'aws-cdk-lib'
+import { App, Stack } from 'aws-cdk-lib'
 import { Template } from 'aws-cdk-lib/assertions'
 import { Wordpress } from '../src/index'
 import '@aws-cdk/assert/jest'
@@ -81,7 +81,7 @@ test('basic wordpress stack', () => {
     })
     template.hasResource('AWS::RDS::DBInstance', {
         Properties: {
-            DBInstanceClass: 'db.r5.large',
+            DBInstanceClass: 'db.t2.micro',
             Engine: 'aurora-mysql',
             PubliclyAccessible: false,
         },
