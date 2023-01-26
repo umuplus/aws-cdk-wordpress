@@ -1,15 +1,26 @@
 import { ApplicationLoadBalancedFargateService } from 'aws-cdk-lib/aws-ecs-patterns'
 import { AuroraMysqlEngineVersion, Credentials, DatabaseCluster, DatabaseClusterEngine } from 'aws-cdk-lib/aws-rds'
+import { CacheProps, ScalingProps } from './utils/types'
+import { CfnCacheCluster, CfnSubnetGroup } from 'aws-cdk-lib/aws-elasticache'
 import { CfnOutput, RemovalPolicy } from 'aws-cdk-lib'
 import { Construct } from 'constructs'
 import { ContainerImage } from 'aws-cdk-lib/aws-ecs'
 import { FileSystem } from 'aws-cdk-lib/aws-efs'
-import { InstanceClass, InstanceSize, InstanceType, SubnetType, Vpc } from 'aws-cdk-lib/aws-ec2'
-import { ScalingProps } from './utils/types'
+import {
+    FlowLog,
+    FlowLogResourceType,
+    InstanceClass,
+    InstanceSize,
+    InstanceType,
+    SubnetType,
+    Vpc,
+} from 'aws-cdk-lib/aws-ec2'
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager'
 
 export interface WordpressProps {
     readonly username?: string
+    readonly dbInstanceType?: InstanceType
+    readonly cache?: CacheProps | boolean
     readonly scaling?: ScalingProps
 }
 
@@ -17,7 +28,7 @@ export class Wordpress extends Construct {
     constructor(scope: Construct, id: string, props?: WordpressProps) {
         super(scope, id)
 
-        const { scaling } = props || {}
+        const { cache, dbInstanceType, scaling } = props || {}
         const databaseName = 'wordpress'
         const tablePrefix = 'wp_'
         const databaseUsername = 'wp_user'
@@ -42,8 +53,9 @@ export class Wordpress extends Construct {
             subnetConfiguration: [
                 { name: 'public', subnetType: SubnetType.PUBLIC, cidrMask: 24 },
                 { name: 'privateIsolated', subnetType: SubnetType.PRIVATE_ISOLATED, cidrMask: 24 },
-            ]
+            ],
         })
+
         const secretDB = new Secret(this, 'WordpressDBSecret-' + id, {
             secretName: `password-of-${databaseUsername}`,
             generateSecretString: { passwordLength: 20, excludePunctuation: true },
@@ -54,7 +66,8 @@ export class Wordpress extends Construct {
             generateSecretString: { passwordLength: 20, excludePunctuation: true },
             removalPolicy: RemovalPolicy.DESTROY,
         })
-        const instanceType = InstanceType.of(InstanceClass.R5, InstanceSize.LARGE)
+
+        const instanceType = dbInstanceType || InstanceType.of(InstanceClass.T2, InstanceSize.MICRO)
         const db = new DatabaseCluster(this, 'WordpressDB-' + id, {
             engine: DatabaseClusterEngine.auroraMysql({ version: AuroraMysqlEngineVersion.VER_2_10_3 }),
             instanceProps: { instanceType, vpc, vpcSubnets: { subnetType: SubnetType.PRIVATE_ISOLATED } },
@@ -62,12 +75,36 @@ export class Wordpress extends Construct {
             defaultDatabaseName: databaseName,
             removalPolicy: RemovalPolicy.DESTROY,
         })
+
         const fs = new FileSystem(this, 'WordpressFS-' + id, {
             vpc,
             fileSystemName: `${databaseName}-${id}`,
             vpcSubnets: { subnetType: SubnetType.PRIVATE_ISOLATED },
             removalPolicy: RemovalPolicy.DESTROY,
         })
+
+        let redis: CfnCacheCluster | undefined = undefined
+        if (cache) {
+            let cacheNodeType = `cache.${InstanceType.of(InstanceClass.T2, InstanceSize.MICRO).toString()}`
+            if (typeof cache !== 'boolean' && cache?.cacheNodeType)
+                cacheNodeType = `cache.${cache.cacheNodeType.toString()}`
+            let numberOfCacheNodes = 1
+            if (typeof cache !== 'boolean' && cache?.numberOfCacheNodes) numberOfCacheNodes = cache.numberOfCacheNodes
+
+            const subnetGroup = new CfnSubnetGroup(this, 'WordpressRedisPSG-' + id, {
+                subnetIds: vpc.privateSubnets.map((subnet) => subnet.subnetId),
+                description: 'Private subnet group for Redis Cluster',
+            })
+            redis = new CfnCacheCluster(this, `WordpressRedisCluster-` + id, {
+                engine: 'redis',
+                cacheNodeType,
+                numCacheNodes: numberOfCacheNodes,
+                vpcSecurityGroupIds: [vpc.vpcDefaultSecurityGroup],
+                cacheSubnetGroupName: subnetGroup.cacheSubnetGroupName,
+            })
+            redis.addDependency(subnetGroup)
+        }
+
         const wp = new ApplicationLoadBalancedFargateService(this, 'WordpressApp-' + id, {
             taskImageOptions: {
                 image: ContainerImage.fromRegistry('bitnami/wordpress:latest'),
@@ -96,14 +133,16 @@ export class Wordpress extends Construct {
         wp.targetGroup.configureHealthCheck({ path: '/', healthyHttpCodes: '200-399' })
         if (minCapacity || maxCapacity) {
             const targetScaling = wp.service.autoScaleTaskCount({ minCapacity, maxCapacity })
-            if (cpuThreshold > 0)
-                targetScaling.scaleOnCpuUtilization('WordpressCPUScaling-' + id, {
-                    targetUtilizationPercent: cpuThreshold,
-                })
-            if (memoryThreshold > 0)
-                targetScaling.scaleOnMemoryUtilization('WordpressMemoryScaling-' + id, {
-                    targetUtilizationPercent: memoryThreshold,
-                })
+            if (maxCapacity > desiredTaskInstanceCount) {
+                if (cpuThreshold > 0)
+                    targetScaling.scaleOnCpuUtilization('WordpressCPUScaling-' + id, {
+                        targetUtilizationPercent: cpuThreshold,
+                    })
+                if (memoryThreshold > 0)
+                    targetScaling.scaleOnMemoryUtilization('WordpressMemoryScaling-' + id, {
+                        targetUtilizationPercent: memoryThreshold,
+                    })
+            }
         }
 
         const dbHostOutput = 'WordpressDBHost-' + id
@@ -111,5 +150,12 @@ export class Wordpress extends Construct {
 
         const wpPasswordOutput = 'WordpressPassword-' + id
         new CfnOutput(this, wpPasswordOutput, { exportName: wpPasswordOutput, value: secretWP.secretValue.toString() })
+
+        if (redis) {
+            const wpRedisHost = 'WordpressRedisHost-' + id
+            new CfnOutput(this, wpRedisHost, { exportName: wpRedisHost, value: redis.attrRedisEndpointAddress })
+            const wpRedisPort = 'WordpressRedisPort-' + id
+            new CfnOutput(this, wpRedisPort, { exportName: wpRedisPort, value: redis.attrRedisEndpointPort })
+        }
     }
 }
