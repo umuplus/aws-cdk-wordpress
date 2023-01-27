@@ -58,9 +58,3 @@ Parameter           | Type      | Required  | Default   | Description         |
 ------------------- | --------- | --------- | --------- | ------------------- |
 cacheNodeType       | number    | false     | t2.micro  | Cache node instance type
 numberOfCacheNodes  | number    | false     | 1         | Number of cache nodes
-
-## Motivation
-
-Main purpose of this Wordpress Construct is to provide a configurable Wordpress deployment stack.
-
-Thus, it will be easier to create a simple GUI to manage deployments of different Wordpress applications from a single place which is gonna be the phase two (:
