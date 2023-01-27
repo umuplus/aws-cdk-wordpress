@@ -9,8 +9,10 @@
     },
     "keywords": [
         "aws",
-        "dynamodb",
-        "ddb"
+        "cdk",
+        "constructs",
+        "wordpress",
+        "typescript"
     ],
     "author": "Umut Aydin",
     "license": "MIT",

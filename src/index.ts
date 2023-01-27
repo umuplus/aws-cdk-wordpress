@@ -3,12 +3,11 @@ import { AuroraMysqlEngineVersion, Credentials, DatabaseCluster, DatabaseCluster
 import { CacheProps, ScalingProps } from './utils/types'
 import { CfnCacheCluster, CfnSubnetGroup } from 'aws-cdk-lib/aws-elasticache'
 import { CfnOutput, RemovalPolicy } from 'aws-cdk-lib'
+import { CloudFrontWebDistribution, OriginProtocolPolicy } from 'aws-cdk-lib/aws-cloudfront'
 import { Construct } from 'constructs'
 import { ContainerImage } from 'aws-cdk-lib/aws-ecs'
 import { FileSystem } from 'aws-cdk-lib/aws-efs'
 import {
-    FlowLog,
-    FlowLogResourceType,
     InstanceClass,
     InstanceSize,
     InstanceType,
@@ -144,6 +143,21 @@ export class Wordpress extends Construct {
                     })
             }
         }
+
+        const cloudfront = new CloudFrontWebDistribution(this, 'WordpressDistribution-' + id, {
+            originConfigs: [
+                {
+                    customOriginSource: {
+                        domainName: wp.loadBalancer.loadBalancerDnsName,
+                        originProtocolPolicy: OriginProtocolPolicy.HTTPS_ONLY,
+                    },
+                    behaviors: [{ isDefaultBehavior: true }],
+                },
+            ],
+        })
+
+        const wpUrl = 'WordpressUrl-' + id
+        new CfnOutput(this, wpUrl, { exportName: wpUrl, value: cloudfront.distributionDomainName })
 
         const dbHostOutput = 'WordpressDBHost-' + id
         new CfnOutput(this, dbHostOutput, { exportName: dbHostOutput, value: db.clusterEndpoint.hostname })

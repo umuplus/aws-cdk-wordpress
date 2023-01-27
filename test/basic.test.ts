@@ -22,6 +22,7 @@ test('basic wordpress stack', () => {
     template.resourceCountIs('AWS::ECS::Cluster', 1)
     template.resourceCountIs('AWS::ECS::TaskDefinition', 1)
     template.resourceCountIs('AWS::ApplicationAutoScaling::ScalableTarget', 1)
+    template.resourceCountIs('AWS::CloudFront::Distribution', 1)
 
     template.hasResource('AWS::IAM::Role', {
         Properties: {
